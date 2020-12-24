@@ -1,0 +1,13 @@
+name = "HyperoctahedralGroup"
+uuid = "33641660-f9d3-461a-8d5f-c1628ffb7a20"
+authors = ["Stopa42 <honza.stopka@gmail.com> and contributors"]
+version = "0.1.0"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
