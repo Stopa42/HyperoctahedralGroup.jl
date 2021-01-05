@@ -3,6 +3,11 @@ uuid = "33641660-f9d3-461a-8d5f-c1628ffb7a20"
 authors = ["Stopa42 <honza.stopka@gmail.com> and contributors"]
 version = "0.1.0"
 
+[deps]
+JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
+Permutations = "2ae35dd2-176d-5d53-8349-f30d82d94d4f"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+
 [compat]
 julia = "1"
 
