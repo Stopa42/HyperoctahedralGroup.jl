@@ -1,4 +1,4 @@
-using Permutations, StaticArrays, JLD2
+using Permutations, StaticArrays, FileIO
 
 println("Building of HyperoctahedralGroup.jl started.")
 
@@ -82,14 +82,63 @@ function create_elements()
     return elements
 end
 
-let elements_file = joinpath(@__DIR__,"elements.jld2")
-    println("Creating group elements.")
-    timestarted = time()
-    global elements = create_elements()
-    save(elements_file,"elements",elements)
-    timeelapsed = time()-timestarted
-    println("All elements created after $timeelapsed s.")
+function verifyelements(elements)
+    if length(unique(elements)) != 192
+        return false
+    end
+    ones_1x4 = SA[1 1 1 1]
+    ones_4x1 = reshape(ones_1x4,(4,1))
+    for el in elements
+        if size(el) != (4,4)
+            return false
+        end
+        if !issubset(unique(el),[0,1,-1])
+            return false
+        end
+        if map(abs,sum(el,dims=1)) != ones_1x4
+            return false
+        end
+        if map(abs,sum(el,dims=2)) != ones_4x1
+            return false
+        end
+    end
+    return true
 end
+
+let elements_file = joinpath(@__DIR__,"elements.jld2")
+    timestarted = time()
+    verified = false
+    howstring = "loaded"
+    if isfile(elements_file)
+        println("Loading group elements.")
+        elements = load(elements_file,"elements")
+        verified = verifyelements(elements)
+    end
+    if !verified
+        howstring = "created"
+        println("Elements could not be loaded. Creating group elements.")
+        global elements = create_elements()
+        save(elements_file,"elements",elements)
+    end
+    timeelapsed = time()-timestarted
+    println("All elements $howstring after $timeelapsed s.")
+end
+
+function write_elements()
+    f = open(joinpath(@__DIR__,"elements.jl"),"w")
+    write(f,"elements = [")
+    for el in elements[1:end-1]
+        write(f,"SA")
+        print(f,el)
+        write(f,",\n")
+    end
+    write(f,"SA")
+    print(f,last(elements))
+    write(f,"]\n")
+    close(f)
+end
+
+write_elements()
 
 function order(e)
     r = e*e
@@ -250,18 +299,49 @@ function isgroup(set)
     return true
 end
 
-let subgroupdict_file = joinpath(@__DIR__,"subgroupdict.jld2")
-    println("Generating all subgroups.")
-    timestarted = time()
-    global subgroupdict = getsubgroups()
-    for igens = 1:4
-        permute!(subgroupdict[(generators = igens,)],sortperm(length.(subgroupdict[(generators = igens,)])))
-    end
-    subgroupdict[:allsubgroups] = vcat([subgroupdict[(generators = i,)] for i = 0:4]...)
-    save(subgroupdict_file,"subgroupdict",subgroupdict)
-    timeelapsed = time()-timestarted
-    println("All subgroups generated after $timeelapsed s.")
+function verifysubgroupdict(subgroupdict)
+    #TODO: implement subgroupdict verification
+    return true
 end
+
+let subgroupdict_file = joinpath(@__DIR__,"subgroupdict.jld2")
+    timestarted = time()
+    verified = false
+    howstring = "loaded"
+    if isfile(subgroupdict_file)
+        println("Loading all subgroups.")
+        subgroupdict = load(subgroupdict_file,"subgroupdict")
+        verified = verifysubgroupdict(subgroupdict)
+    end
+    if !verified
+        howstring = "generated"
+        println("Generating all subgroups.")
+        global subgroupdict = getsubgroups()
+        for igens = 1:4
+            permute!(subgroupdict[(generators = igens,)],sortperm(length.(subgroupdict[(generators = igens,)])))
+        end
+        subgroupdict[:allsubgroups] = vcat([subgroupdict[(generators = i,)] for i = 0:4]...)
+        save(subgroupdict_file,"subgroupdict",subgroupdict)
+    end
+    timeelapsed = time()-timestarted
+    println("All subgroups $howstring after $timeelapsed s.")
+end
+
+function write_subgroups()
+    f = open(joinpath(@__DIR__,"subgroups.jl"),"w")
+    write(f,"subgroupdict = Dict(")
+    for key in keys(subgroupdict)
+        print(f,key)
+        write(f," => ")
+        print(f,subgroupdict[key])
+        write(f,",\n")
+    end
+    skip(f,-2)
+    write(f,")\n")
+    close(f)
+end
+
+write_subgroups()
 
 const vertices = vec([SA[a,b,c,d] for a in [-1,1], b in [-1,1], c in [-1,1], d in [-1,1]])
 
@@ -451,13 +531,15 @@ end
 
 function write_groupmatrix()
     f = open(joinpath(@__DIR__,"groupmatrix.jl"),"w")
-    write(f,"const g = [")
-    for row in axes(g,1)
-        for col in axes(g,2)
+    groupmatrixname = :g
+    write(f,"const $(string(groupmatrixname)) = [")
+    for row in axes(eval(groupmatrixname),1)
+        for col in axes(eval(groupmatrixname),2)
             write(f,"$(g[row,col]) ")
         end
         write(f,";\n")
     end
+    skip(f,-2)
     write(f,"]\n")
     close(f)
 end
